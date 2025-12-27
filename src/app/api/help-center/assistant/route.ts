@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { helpAssistantContext } from "@/data/help-center";
 
-const DEFAULT_MODEL = "deepseek-r1:14b";
+const DEFAULT_MODEL = "qwen3:14b";
 const DEFAULT_HOST = "http://127.0.0.1:11434";
 
 const sanitizeModelReply = (text?: string) => {
   if (!text) return undefined;
 
+  // Remove Qwen3 thinking blocks (always uses thinking mode)
   const withoutReasoning = text
     .replace(/<think>[\s\S]*?<\/think>/gi, "")
     .replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, "")
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
           .join("\n")
       : "";
 
-    const prompt = `You are the Volus AI Help Concierge. Use ONLY the knowledge base below. If an answer is unknown, apologize and direct the user to support@volus.ai.\n\nKnowledge Base:\n${helpAssistantContext}\n\nConversation so far:\n${formattedHistory}\n\nCustomer: ${message}\nAgent:`;
+    const prompt = `You are the Volus AI Help Concierge. Use ONLY the knowledge base below. If an answer is unknown, apologize and direct the user to support@volus.ai.\n\nKnowledge Base:\n${helpAssistantContext}\n\nConversation so far:\n${formattedHistory}\n\nCustomer: ${message}\nAgent: /think`;
 
     const response = await fetch(`${ollamaHost}/api/generate`, {
       method: "POST",

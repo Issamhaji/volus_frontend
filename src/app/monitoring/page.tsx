@@ -157,7 +157,8 @@ export default function MultiChannelMonitoringPage() {
             <ProductLens />
           </div>
         </section>
-                <PricingSection />
+        
+        <PricingSection />
 
         <section className="relative bg-transparent px-4 py-20 sm:px-6 sm:py-24">
           <div className="mx-auto max-w-6xl">
