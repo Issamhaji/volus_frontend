@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -20,50 +20,6 @@ import {
 } from "lucide-react";
 import { SiteNavbar } from "@/components/navigation/SiteNavbar";
 import Footer from "../components/Footer";
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api").replace(/\/$/, "");
-
-async function fetchSentimentData() {
-  try {
-    const res = await fetch(`${API_BASE}/sentiment/overview`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (error) {
-    console.error("Sentiment API fetch failed", error);
-    return null;
-  }
-}
-
-interface SentimentData {
-  overall_sentiment?: {
-    average_rating?: number;
-    weighted_average?: number;
-    total_products_analyzed?: number;
-    total_reviews?: number;
-  };
-  sentiment_distribution?: {
-    positive?: number;
-    neutral?: number;
-    negative?: number;
-    positive_percent?: number;
-  };
-  emotion_breakdown?: {
-    satisfaction?: number;
-    trust?: number;
-    value_perception?: number;
-  };
-  signals?: {
-    trending_positive?: boolean;
-    review_velocity?: string;
-    confidence?: number;
-  };
-}
-
-const defaultStats = [
-  { label: "Signals / min", value: "2.4M" },
-  { label: "Platforms", value: "38" },
-  { label: "Sentiment accuracy", value: "96%" },
-];
 
 const signalSources = [
   {
@@ -147,26 +103,7 @@ function BackgroundAura() {
 function Hero() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [stats, setStats] = useState(defaultStats);
   const isDisabled = useMemo(() => !query.trim(), [query]);
-
-  useEffect(() => {
-    const loadData = async () => {
-      const data = await fetchSentimentData();
-      if (data) {
-        const avgRating = data.overall_sentiment?.average_rating || 4.28;
-        const positivePercent = data.sentiment_distribution?.positive_percent || 85.2;
-        const totalReviews = data.overall_sentiment?.total_reviews || 2820261;
-        const sentimentStats = [
-          { label: "Avg rating", value: avgRating.toFixed(2) },
-          { label: "Positive sentiment", value: positivePercent.toFixed(1) + "%" },
-          { label: "Total reviews", value: (totalReviews / 1000000).toFixed(1) + "M" },
-        ];
-        setStats(sentimentStats);
-      }
-    };
-    loadData();
-  }, []);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -174,6 +111,12 @@ function Hero() {
     if (!nextQuery) return;
     router.push(`/insights?query=${encodeURIComponent(nextQuery)}`);
   };
+
+  const stats = [
+    { label: "Signals / min", value: "2.4M" },
+    { label: "Platforms", value: "38" },
+    { label: "Sentiment accuracy", value: "96%" },
+  ];
 
   return (
     <section className="relative overflow-hidden px-6 pt-28 pb-24 sm:px-10">

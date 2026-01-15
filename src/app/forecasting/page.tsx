@@ -13,46 +13,7 @@ import PricingSection from '../components/landing/PricingSection';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api").replace(/\/$/, "");
-
-async function fetchForecastingData() {
-  try {
-    const res = await fetch(`${API_BASE}/forecasting/overview`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (error) {
-    console.error("Forecasting API fetch failed", error);
-    return null;
-  }
-}
-
-interface ForecastingData {
-  velocity_summary?: {
-    average_velocity?: number;
-    positive_momentum?: number;
-    negative_momentum?: number;
-    stable?: number;
-  };
-  trend_distribution?: {
-    hot?: number;
-    growing?: number;
-    emerging?: number;
-    stable?: number;
-    cooling?: number;
-  };
-  projections?: {
-    expected_hot_7d?: number;
-    expected_decline_7d?: number;
-    confidence?: number;
-  };
-  forecast_accuracy?: {
-    last_7d?: number;
-    last_30d?: number;
-    model?: string;
-  };
-}
-
-const defaultHeroStats = [
+const heroStats = [
   { label: 'Signals reconciled each minute', value: '31K' },
   { label: 'Average revenue lift', value: '+41%' },
   { label: 'Markets actively trained', value: '27' },
@@ -269,32 +230,7 @@ export default function PredictiveForecastingPage() {
 function Hero() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [heroStats, setHeroStats] = useState(defaultHeroStats);
   const isDisabled = useMemo(() => !query.trim(), [query]);
-
-  useEffect(() => {
-    const loadData = async () => {
-      const data = await fetchForecastingData();
-      if (data) {
-        const stats = [
-          { 
-            label: 'Hot products', 
-            value: String(data.trend_distribution?.hot || 54) 
-          },
-          { 
-            label: 'Growing products', 
-            value: String(data.trend_distribution?.growing || 184) 
-          },
-          { 
-            label: 'Avg velocity', 
-            value: '+' + (data.velocity_summary?.average_velocity?.toFixed(2) || '3.41') + '%' 
-          },
-        ];
-        setHeroStats(stats);
-      }
-    };
-    loadData();
-  }, []);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
