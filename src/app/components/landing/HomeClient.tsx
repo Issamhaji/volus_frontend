@@ -147,7 +147,7 @@ const ProductSentimentLanding = () => {
        <HeroScrollImages
         title="Step into the Future"
         subtitle="Real-Time Analytics"
-        meta="Q4 • 2025" 
+        meta="Q1 • 2026" 
         credits={
           <>
             <p>Powered by advanced AI models and multi-platform data aggregation</p>
@@ -170,7 +170,7 @@ const ProductSentimentLanding = () => {
             caption: '02 • AI ENGINE'
           },
           {
-            src: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2015&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+            src: 'https://images.unsplash.com/photo-1573152143286-0c422b4d2175?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
             title: 'Sentiment Analysis',
             description: 'Monitor real-time sentiment across social media, YouTube, Reddit, Amazon and news sources. Track brand perception, product reception, and emerging narratives as they unfold.',
             caption: '03 • ANALYTICS'
