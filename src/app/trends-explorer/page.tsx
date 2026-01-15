@@ -35,28 +35,31 @@ type TrendListResponse = {
   count?: number;
 };
 
-// All available categories with their display info
+// All available categories with their display info - IDs match actual API categories
 export const CATEGORIES = [
-  { id: "electronics", name: "Electronics", icon: "📱", color: "from-blue-500/20 to-cyan-500/20", borderColor: "border-blue-500/30" },
-  { id: "cosmetics", name: "Cosmetics & Beauty", icon: "💄", color: "from-pink-500/20 to-rose-500/20", borderColor: "border-pink-500/30" },
-  { id: "health_wellness", name: "Health & Wellness", icon: "💊", color: "from-emerald-500/20 to-green-500/20", borderColor: "border-emerald-500/30" },
-  { id: "home_appliances", name: "Home Appliances", icon: "🏠", color: "from-amber-500/20 to-orange-500/20", borderColor: "border-amber-500/30" },
-  { id: "baby_kids", name: "Baby & Kids", icon: "👶", color: "from-sky-500/20 to-blue-500/20", borderColor: "border-sky-500/30" },
-  { id: "outdoor_camping", name: "Outdoor & Camping", icon: "⛺", color: "from-lime-500/20 to-green-500/20", borderColor: "border-lime-500/30" },
-  { id: "watches_jewelry", name: "Watches & Jewelry", icon: "⌚", color: "from-yellow-500/20 to-amber-500/20", borderColor: "border-yellow-500/30" },
-  { id: "arts_crafts", name: "Arts & Crafts", icon: "🎨", color: "from-purple-500/20 to-violet-500/20", borderColor: "border-purple-500/30" },
-  { id: "music_audio", name: "Music & Audio", icon: "🎵", color: "from-indigo-500/20 to-purple-500/20", borderColor: "border-indigo-500/30" },
-  { id: "office_stationery", name: "Office & Stationery", icon: "📎", color: "from-slate-500/20 to-gray-500/20", borderColor: "border-slate-500/30" },
-  { id: "travel_luggage", name: "Travel & Luggage", icon: "✈️", color: "from-cyan-500/20 to-teal-500/20", borderColor: "border-cyan-500/30" },
-  { id: "automotive", name: "Automotive", icon: "🚗", color: "from-red-500/20 to-orange-500/20", borderColor: "border-red-500/30" },
-  { id: "books_literature", name: "Books & Literature", icon: "📚", color: "from-brown-500/20 to-amber-500/20", borderColor: "border-amber-500/30" },
+  { id: "Electronics & Photo", name: "Electronics", icon: "📱", color: "from-blue-500/20 to-cyan-500/20", borderColor: "border-blue-500/30" },
+  { id: "Beauty", name: "Beauty & Cosmetics", icon: "💄", color: "from-pink-500/20 to-rose-500/20", borderColor: "border-pink-500/30" },
+  { id: "Health & Personal Care", name: "Health & Wellness", icon: "💊", color: "from-emerald-500/20 to-green-500/20", borderColor: "border-emerald-500/30" },
+  { id: "Home & Kitchen", name: "Home & Kitchen", icon: "🏠", color: "from-amber-500/20 to-orange-500/20", borderColor: "border-amber-500/30" },
+  { id: "Baby Products", name: "Baby Products", icon: "👶", color: "from-sky-500/20 to-blue-500/20", borderColor: "border-sky-500/30" },
+  { id: "Sports & Outdoors", name: "Sports & Outdoors", icon: "⛺", color: "from-lime-500/20 to-green-500/20", borderColor: "border-lime-500/30" },
+  { id: "Fashion", name: "Fashion", icon: "👗", color: "from-yellow-500/20 to-amber-500/20", borderColor: "border-yellow-500/30" },
+  { id: "Toys & Games", name: "Toys & Games", icon: "🎮", color: "from-purple-500/20 to-violet-500/20", borderColor: "border-purple-500/30" },
+  { id: "Pet Supplies", name: "Pet Supplies", icon: "🐾", color: "from-orange-500/20 to-red-500/20", borderColor: "border-orange-500/30" },
+  { id: "Garden", name: "Garden", icon: "🌱", color: "from-green-500/20 to-emerald-500/20", borderColor: "border-green-500/30" },
+  { id: "Automotive", name: "Automotive", icon: "🚗", color: "from-red-500/20 to-orange-500/20", borderColor: "border-red-500/30" },
+  { id: "Books", name: "Books", icon: "📚", color: "from-amber-600/20 to-amber-500/20", borderColor: "border-amber-500/30" },
+  { id: "Amazon Devices & Accessories", name: "Amazon Devices", icon: "📦", color: "from-indigo-500/20 to-purple-500/20", borderColor: "border-indigo-500/30" },
+  { id: "Computers & Accessories", name: "Computers", icon: "💻", color: "from-slate-500/20 to-gray-500/20", borderColor: "border-slate-500/30" },
+  { id: "Grocery", name: "Grocery", icon: "🛒", color: "from-cyan-500/20 to-teal-500/20", borderColor: "border-cyan-500/30" },
+  { id: "Musical Instruments & DJ", name: "Musical Instruments", icon: "🎵", color: "from-violet-500/20 to-purple-500/20", borderColor: "border-violet-500/30" },
 ] as const;
 
 export type CategoryId = typeof CATEGORIES[number]["id"];
 
 // Fetch trending products for a specific category
 async function fetchCategoryTrends(category: string): Promise<TrendProduct[]> {
-  const data = await fetchJson<TrendListResponse>(`/trends/?category=${category}&limit=6&min_score=20`);
+  const data = await fetchJson<TrendListResponse>(`/trends/?category=${encodeURIComponent(category)}&limit=6&min_score=20`);
   return data?.products ?? [];
 }
 

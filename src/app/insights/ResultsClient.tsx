@@ -20,39 +20,27 @@ interface InsightsResultsProps {
 
 type FetchState = "idle" | "loading" | "success" | "error";
 
-type RawProduct = Record<string, unknown> & {
-  data?: Record<string, unknown>;
-};
+type RawProduct = Record<string, unknown>;
 
 interface NormalizedProduct {
   id: string;
   name: string;
   category: string;
   trendScore: number | null;
-  urgencyScore: number | null;
-  urgencyLabel?: string;
-  recommendation?: string;
-  marketSaturation?: string;
-  profitPotential?: string;
+  trendStatus?: string;
+  momentum?: number | null;
+  price?: string;
+  rating?: string;
+  ratingCount?: string;
+  rank?: string;
+  imageUrl?: string;
+  productUrl?: string;
   platforms: string[];
   platformCount?: number | null;
   lastUpdated?: string;
-  pricePoints: { label: string; value: string | null }[];
-  signals: { label: string; value: string }[];
+  source?: string;
   raw: RawProduct;
 }
-
-const toRecord = (value: unknown): Record<string, unknown> =>
-  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-
-const parseMaybeJson = (value: unknown): unknown => {
-  if (typeof value !== "string") return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return value;
-  }
-};
 
 const safeNumber = (value: unknown): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -65,53 +53,65 @@ const safeNumber = (value: unknown): number | null => {
   return null;
 };
 
+const extractPlatforms = (platformsData: unknown): string[] => {
+  if (!platformsData) return [];
+
+  // Handle object format: { amazon: true, reddit: false, ... }
+  if (typeof platformsData === "object" && !Array.isArray(platformsData)) {
+    return Object.entries(platformsData as Record<string, boolean>)
+      .filter(([, active]) => active)
+      .map(([name]) => name);
+  }
+
+  // Handle array format
+  if (Array.isArray(platformsData)) {
+    return platformsData.map(String);
+  }
+
+  // Handle comma-separated string
+  if (typeof platformsData === "string") {
+    return platformsData.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+
+  return [];
+};
+
 const normalizeProduct = (entry: unknown, index: number): NormalizedProduct | null => {
-  const parsed = parseMaybeJson(entry);
-  if (!parsed || typeof parsed !== "object") {
+  if (!entry || typeof entry !== "object") {
     return null;
   }
 
-  const product = parsed as RawProduct;
-  const data = toRecord(product.data);
+  const product = entry as RawProduct;
 
+  // Extract name from multiple possible fields
   const name =
-    (data.amazon_bs_title as string | undefined) ||
-    (data.amazon_ms_title as string | undefined) ||
+    (product.name as string | undefined) ||
+    (product.normalized_name as string | undefined) ||
+    (product.title as string | undefined) ||
     "Untitled product";
 
   const category = (product.category as string | undefined) || "General";
-  const trendScore = safeNumber(data.trend_score);
-  const urgencyScore = safeNumber(data.urgency_score);
-  const platforms = typeof data.platforms === "string"
-    ? data.platforms.split(",").map((item) => item.trim()).filter(Boolean)
-    : [];
-
-  const pricePoints = [
-    { label: "Amazon Best Seller", value: data.amazon_bs_price as string | null },
-    { label: "Amazon Movers", value: data.amazon_ms_price as string | null },
-  ];
-
-  const signals = [
-    { label: "Market saturation", value: (data.market_saturation as string) || "—" },
-    { label: "Profit potential", value: (data.profit_potential as string) || "—" },
-    { label: "Action plan", value: (data.action_plan as string) || "No plan yet" },
-  ];
+  const trendScore = safeNumber(product.trend_score);
+  const momentum = safeNumber(product.momentum);
+  const platforms = extractPlatforms(product.platforms);
 
   return {
     id: String(product.id ?? `${index}-${name}`),
     name,
     category,
     trendScore,
-    urgencyScore,
-    urgencyLabel: data.urgency_label as string | undefined,
-    recommendation: data.recommendation as string | undefined,
-    marketSaturation: data.market_saturation as string | undefined,
-    profitPotential: data.profit_potential as string | undefined,
+    trendStatus: product.trend_status as string | undefined,
+    momentum,
+    price: product.price as string | undefined,
+    rating: product.rating as string | undefined,
+    ratingCount: product.rating_count as string | undefined,
+    rank: product.rank as string | undefined,
+    imageUrl: product.image_url as string | undefined,
+    productUrl: product.product_url as string | undefined,
     platforms,
-    platformCount: safeNumber(data.platform_count),
-    lastUpdated: data.last_updated as string | undefined,
-    pricePoints,
-    signals,
+    platformCount: safeNumber(product.platforms_count),
+    lastUpdated: product.last_updated as string | undefined,
+    source: product.source as string | undefined,
     raw: product,
   };
 };
@@ -330,67 +330,88 @@ export function InsightsResults({ initialQuery }: InsightsResultsProps) {
                     )}
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.45em] text-white/60">
-                          {product.category}
-                        </p>
-                        <h3 className="mt-2 text-2xl font-semibold text-white">
-                          {product.name}
-                        </h3>
-                        {product.recommendation && (
-                          <p className="mt-2 text-sm text-white/80">
-                            {product.recommendation}
-                          </p>
+                      <div className="flex gap-4">
+                        {product.imageUrl && (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="w-20 h-20 object-cover rounded-xl border border-white/10"
+                          />
                         )}
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.45em] text-white/60">
+                            {product.category}
+                          </p>
+                          <h3 className="mt-2 text-xl font-semibold text-white line-clamp-2">
+                            {product.name}
+                          </h3>
+                          {product.price && (
+                            <p className="mt-2 text-lg font-medium text-emerald-300">
+                              {product.price}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <span className="text-xs font-medium text-white/70">Trend score</span>
                         <p className="text-3xl font-semibold text-white">
                           {product.trendScore !== null ? product.trendScore : "—"}
                         </p>
                         <Badge className={cn("mt-1", trendTheme.badge)}>
-                          {trendTheme.label}
+                          {product.trendStatus || trendTheme.label}
                         </Badge>
                       </div>
                     </div>
 
                     <div className="mt-5 flex flex-wrap gap-2">
-                      {product.urgencyLabel && (
+                      {product.trendStatus && (
                         <Badge variant="secondary" className="bg-white/10 text-white">
-                          <Flame className="size-3" /> {product.urgencyLabel}
+                          <Flame className="size-3" /> {product.trendStatus}
                         </Badge>
                       )}
-                      {product.marketSaturation && (
+                      {product.rank && (
                         <Badge className="bg-black/30 text-white">
-                          <Gauge className="size-3" /> {product.marketSaturation}
+                          <Gauge className="size-3" /> Rank #{product.rank}
                         </Badge>
                       )}
-                      {product.profitPotential && (
+                      {product.momentum !== null && product.momentum !== undefined && (
                         <Badge className="bg-black/30 text-white">
-                          <Sparkles className="size-3" /> {product.profitPotential}
+                          <Sparkles className="size-3" /> Momentum: {product.momentum.toFixed(1)}
                         </Badge>
                       )}
                     </div>
 
                     <div className="mt-6 grid gap-4 text-sm text-white/80 md:grid-cols-2">
                       <div className="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-4">
-                        <p className="text-xs uppercase tracking-[0.35em] text-white/60">Pricing</p>
-                        {product.pricePoints.map((price) => (
-                          <div key={price.label} className="flex justify-between text-sm">
-                            <span className="text-white/60">{price.label}</span>
-                            <span className="font-medium text-white">
-                              {price.value ?? "—"}
-                            </span>
-                          </div>
-                        ))}
+                        <p className="text-xs uppercase tracking-[0.35em] text-white/60">Details</p>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-white/60">Rating</span>
+                          <span className="font-medium text-white">
+                            {product.rating ?? "—"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-white/60">Reviews</span>
+                          <span className="font-medium text-white">
+                            {product.ratingCount ?? "—"}
+                          </span>
+                        </div>
                       </div>
                       <div className="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-4">
-                        <p className="text-xs uppercase tracking-[0.35em] text-white/60">Signals</p>
-                        {product.signals.map((signal) => (
-                          <div key={signal.label} className="text-sm text-white">
-                            <span className="text-white/60">{signal.label}:</span> {signal.value}
-                          </div>
-                        ))}
+                        <p className="text-xs uppercase tracking-[0.35em] text-white/60">Source</p>
+                        <div className="text-sm text-white">
+                          <span className="text-white/60">Platform:</span> {product.source ?? "Amazon"}
+                        </div>
+                        {product.productUrl && (
+                          <a
+                            href={product.productUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-indigo-300 hover:text-indigo-200 underline"
+                          >
+                            View on Amazon →
+                          </a>
+                        )}
                       </div>
                     </div>
 
