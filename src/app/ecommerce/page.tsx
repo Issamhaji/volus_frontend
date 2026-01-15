@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,50 +10,9 @@ import PricingSection from "../components/landing/PricingSection";
 import CommerceIntelShowcase from "./CommerceIntelShowcase";
 import { Button } from "@/components/ui/button";
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api").replace(/\/$/, "");
-
-async function fetchEcommerceData() {
-  try {
-    const res = await fetch(`${API_BASE}/ecommerce/overview`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (error) {
-    console.error("Ecommerce API fetch failed", error);
-    return null;
-  }
-}
-
-interface EcommerceData {
-  market_overview?: {
-    total_products?: number;
-    total_sources?: number;
-    total_categories?: number;
-    avg_price?: number;
-    price_range?: {
-      min?: number;
-      max?: number;
-    };
-  };
-  price_distribution?: Record<string, number>;
-  top_performers?: Array<{
-    id?: number;
-    name?: string;
-    category?: string;
-    price?: string;
-    trend_score?: number;
-    rating?: string;
-  }>;
-  insights?: {
-    dominant_category?: string;
-    price_trend?: string;
-    market_health?: string;
-    competition_level?: string;
-  };
-}
-
-const defaultHeroStats = [
-  { label: "Avg. price tracked", value: "$92.77" },
-  { label: "Price range", value: "$0.79-$1,072" },
+const heroStats = [
+  { label: "Avg. sales lift", value: "+18%" },
+  { label: "Catalog synced", value: "4.2M SKUs" },
   { label: "Signals correlated", value: "12 data pipes" },
   { label: "Automation rules", value: "320+" },
 ];
@@ -167,26 +126,7 @@ const SkewInsightCard = ({
 export default function EcommerceAnalyticsPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [heroStats, setHeroStats] = useState(defaultHeroStats);
   const isDisabled = useMemo(() => !query.trim(), [query]);
-
-  useEffect(() => {
-    const loadData = async () => {
-      const data = await fetchEcommerceData();
-      if (data) {
-        const market = data.market_overview || {};
-        const priceRange = market.price_range || {};
-        const stats = [
-          { label: "Avg. price tracked", value: "$" + (market.avg_price?.toFixed(2) || "92.77") },
-          { label: "Price range", value: "$" + (priceRange.min?.toFixed(2) || "0.79") + "-$" + (priceRange.max?.toFixed(0) || "1,072") },
-          { label: "Total products", value: (market.total_products || 22368).toLocaleString() },
-          { label: "Categories", value: String(market.total_categories || 10) },
-        ];
-        setHeroStats(stats);
-      }
-    };
-    loadData();
-  }, []);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

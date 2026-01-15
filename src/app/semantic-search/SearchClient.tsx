@@ -55,13 +55,10 @@ export function SearchClient({ planTier }: { planTier: PlanTier }) {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({
-        query: currentQuery,
-        max_results: "20",
-      });
-      const res = await fetch(`${API_BASE}/search?${params.toString()}`, {
-        method: "GET",
-        headers: { "Accept": "application/json" },
+      const res = await fetch(`${API_BASE}/search/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: currentQuery, max_results: 20, use_semantic: true }),
       });
       if (!res.ok) throw new Error(`Search failed with ${res.status}`);
       const payload: SearchResponse = await res.json();
