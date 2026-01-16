@@ -11,7 +11,44 @@ import { ZoomParallax } from '@/components/ui/zoom-parallax';
 import PricingSection from '../components/landing/PricingSection';
 import { Button } from '@/components/ui/button';
 
-const heroStats = [
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api").replace(/\/$/, "");
+
+async function fetchMonitoringData() {
+  try {
+    const res = await fetch(`${API_BASE}/monitoring/overview`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    console.error("Monitoring API fetch failed", error);
+    return null;
+  }
+}
+
+interface MonitoringData {
+  coverage?: {
+    total_products?: number;
+    sources_monitored?: number;
+    categories_tracked?: number;
+    source_breakdown?: Record<string, number>;
+  };
+  freshness?: {
+    last_scrape?: string;
+    last_import?: string;
+    data_age_hours?: number;
+  };
+  alerts?: {
+    hot_products?: number;
+    growing_products?: number;
+    new_entries_24h?: number;
+    price_changes?: number;
+  };
+  health?: {
+    status?: string;
+    uptime_percent?: number;
+  };
+}
+
+const defaultHeroStats = [
   { label: 'Data sources monitored', value: '42+', detail: 'E-commerce, social media, news, blogs' },
   { label: 'Signals filtered daily', value: '2.3B', detail: 'Noise eliminated, insights delivered' },
   { label: 'Decision-ready insights', value: '<90s', detail: 'From raw data to clear action' },
@@ -114,35 +151,6 @@ const parallaxImages = [
 ];
 
 export default function MultiChannelMonitoringPage() {
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const lenis = new Lenis({
-      duration: 1.05,
-      smoothWheel: true,
-      lerp: 0.08,
-    });
-
-    let raf: number;
-    const rafLoop = (time: number) => {
-      lenis.raf(time);
-      raf = requestAnimationFrame(rafLoop);
-    };
-
-    raf = requestAnimationFrame(rafLoop);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      lenis.destroy();
-    };
-  }, []);
-
-  const gradientBackground = useMemo(
-    () => (
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(79,70,229,0.18),_transparent_55%)]" />
-    ),
-    []
-  );
-
   return (
     <div className="min-h-screen bg-[#03000A] text-white">
       <SiteNavbar variant="marketing" />
@@ -150,15 +158,14 @@ export default function MultiChannelMonitoringPage() {
         <Hero />
         <ChannelRibbon />
   <section className="relative px-4 py-20 sm:px-6 sm:py-24" id="monitoring">
-          {gradientBackground}
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(79,70,229,0.18),_transparent_55%)]" />
           <div className="relative z-10 mx-auto max-w-6xl space-y-16">
             {/* <IntroGrid /> */}
             <ChannelGrid />
             <ProductLens />
           </div>
         </section>
-        
-        <PricingSection />
+                <PricingSection />
 
         <section className="relative bg-transparent px-4 py-20 sm:px-6 sm:py-24">
           <div className="mx-auto max-w-6xl">
@@ -190,7 +197,40 @@ export default function MultiChannelMonitoringPage() {
 function Hero() {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [heroStats, setHeroStats] = useState(defaultHeroStats);
   const isDisabled = useMemo(() => !query.trim(), [query]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const data = await fetchMonitoringData();
+      if (data) {
+        const stats = [
+          { 
+            label: 'Products monitored', 
+            value: (data.coverage?.total_products || 22368).toLocaleString(), 
+            detail: 'Across all sources' 
+          },
+          { 
+            label: 'Categories tracked', 
+            value: String(data.coverage?.categories_tracked || 33), 
+            detail: 'Comprehensive market coverage' 
+          },
+          { 
+            label: 'Hot products', 
+            value: String(data.alerts?.hot_products || 18), 
+            detail: 'Trending right now' 
+          },
+          { 
+            label: 'Data freshness', 
+            value: data.freshness?.data_age_hours ? `${data.freshness.data_age_hours.toFixed(1)}h` : '<90s', 
+            detail: 'Real-time monitoring' 
+          },
+        ];
+        setHeroStats(stats);
+      }
+    };
+    loadData();
+  }, []);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -230,7 +270,7 @@ function Hero() {
             transition={{ delay: 0.3 }}
             className="text-base text-gray-300 max-w-2xl sm:text-lg"
           >
-            We monitor 42+ data sources e-commerce platforms, social media, news, blogs, and YouTube, filtering out spam and noise with advanced NLP and sentiment analysis. Get decision-ready insights in under 90 seconds, whether you&apos;re a solo builder or a Fortune 500 team.
+            We monitor {heroStats[0].value} data sources including e-commerce platforms, social media, news, blogs, and YouTube, filtering out spam and noise with advanced NLP and sentiment analysis. Get decision-ready insights in under 90 seconds, whether you&apos;re a solo builder or a Fortune 500 team.
           </motion.p>
 
           <motion.form

@@ -50,6 +50,7 @@ const Footer = () => {
 
   const solutionsLinks = [
     { label: 'E-commerce Analytics', href: '/ecommerce' },
+    { label: 'Brand Monitoring', href: '/brand' },
     { label: 'Competitor Analysis', href: '/competitor' },
     { label: 'Demand Forecasting', href: '/demand' },
   ];
@@ -57,6 +58,7 @@ const Footer = () => {
   const resourcesLinks = [
     { label: 'Documentation', href: '/docs' },
     { label: 'Case Studies', href: '/cases' },
+    { label: 'Blog', href: '/blog' },
     { label: 'Help Center', href: '/help' },
   ];
 
@@ -64,6 +66,7 @@ const Footer = () => {
     { label: 'Privacy Policy', href: '/privacy' },
     { label: 'Terms of Service', href: '/terms' },
     { label: 'Cookie Policy', href: '/cookies' },
+    { label: 'Security', href: '/security' },
   ];
 
   const footerLinks = {

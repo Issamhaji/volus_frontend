@@ -62,6 +62,11 @@ type TrendProduct = {
   momentum?: number;
   platforms_count?: number;
   platforms?: Record<string, boolean> | string[];
+  image_url?: string;
+  price?: string;
+  rating?: string;
+  rating_count?: string;
+  product_url?: string;
 };
 
 type CategoryInfo = {
@@ -94,7 +99,7 @@ function formatScore(score?: number) {
 function getTrendStatusColor(status?: string) {
   switch (status?.toLowerCase()) {
     case "hot": return "bg-red-500/20 text-red-300 border-red-500/30";
-    case "rising": 
+    case "rising":
     case "growing": return "bg-amber-500/20 text-amber-300 border-amber-500/30";
     case "emerging": return "bg-emerald-500/20 text-emerald-300 border-emerald-500/30";
     case "stable": return "bg-blue-500/20 text-blue-300 border-blue-500/30";
@@ -115,22 +120,22 @@ export default function TrendsLanding({
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleCategorySelect = useCallback((categoryId: string) => {
-    router.push(`/trends-explorer?category=${categoryId}`);
+    router.push(`/trends-explorer?category=${encodeURIComponent(categoryId)}`);
   }, [router]);
 
   const clearCategory = useCallback(() => {
     router.push("/trends-explorer");
   }, [router]);
 
-  const filteredCategories = searchQuery 
-    ? categories.filter(c => 
-        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.id.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+  const filteredCategories = searchQuery
+    ? categories.filter(c =>
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.id.toLowerCase().includes(searchQuery.toLowerCase())
+    )
     : categories;
 
-  const selectedCategoryInfo = selectedCategory 
-    ? categories.find(c => c.id === selectedCategory) 
+  const selectedCategoryInfo = selectedCategory
+    ? categories.find(c => c.id === selectedCategory)
     : null;
 
   return (
@@ -138,9 +143,9 @@ export default function TrendsLanding({
       <BackgroundAura />
       <main className="relative z-10">
         <SiteNavbar variant="marketing" planBadge={{ title: planLabel(planTier), description: "Trend Explorer" }} />
-        
+
         <Hero />
-        
+
         <CategoryExplorer
           categories={filteredCategories}
           selectedCategory={selectedCategory}
@@ -159,9 +164,9 @@ export default function TrendsLanding({
           />
         )}
 
-        <HotTrendsSection 
-          products={hotProducts} 
-          unlockedPro={unlockedPro} 
+        <HotTrendsSection
+          products={hotProducts}
+          unlockedPro={unlockedPro}
         />
 
         <AnimatedValueSection />
@@ -215,7 +220,7 @@ function Hero() {
           </h1>
 
           <p className="mt-6 text-lg sm:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            Select a category to explore the hottest products, emerging trends, and market opportunities. 
+            Select a category to explore the hottest products, emerging trends, and market opportunities.
             Our AI analyzes millions of data points across Amazon, TikTok, and Google.
           </p>
 
@@ -373,7 +378,7 @@ function CategoryResults({ category, products, unlockedPro }: CategoryResultsPro
   return (
     <section className="relative px-6 py-16 sm:px-10">
       <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/10 via-transparent to-transparent pointer-events-none" />
-      
+
       <div className="max-w-6xl mx-auto relative">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -389,15 +394,15 @@ function CategoryResults({ category, products, unlockedPro }: CategoryResultsPro
                   Trending in {category.name}
                 </h2>
                 <p className="text-gray-400 mt-1">
-                  {products.length > 0 
+                  {products.length > 0
                     ? `${products.length} trending products found`
                     : "Analyzing trends..."
                   }
                 </p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="border-white/20 text-white hover:bg-white/10 rounded-full"
               asChild
             >
@@ -427,13 +432,23 @@ function CategoryResults({ category, products, unlockedPro }: CategoryResultsPro
                     compact={false}
                   >
                     <div className="group relative rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition-all duration-300 hover:bg-white/[0.05] hover:border-white/20">
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        {product.image_url && (
+                          <img
+                            src={product.image_url}
+                            alt={productName(product)}
+                            className="w-16 h-16 object-cover rounded-xl border border-white/10 shrink-0"
+                          />
+                        )}
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-base font-semibold text-white truncate group-hover:text-indigo-200 transition-colors">
+                          <h3 className="text-base font-semibold text-white line-clamp-2 group-hover:text-indigo-200 transition-colors">
                             {productName(product)}
                           </h3>
-                          {product.brand && (
-                            <p className="text-xs text-gray-500 mt-1">{product.brand}</p>
+                          {product.price && (
+                            <p className="text-sm text-emerald-300 mt-1">{product.price}</p>
+                          )}
+                          {product.rating && (
+                            <p className="text-xs text-gray-400 mt-1">{product.rating}</p>
                           )}
                         </div>
                         <Badge className={cn("shrink-0 text-xs", getTrendStatusColor(product.trend_status))}>
@@ -524,18 +539,32 @@ function HotTrendsSection({ products, unlockedPro }: HotTrendsSectionProps) {
                   compact={true}
                 >
                   <div className="group relative rounded-xl border border-white/10 bg-white/[0.02] p-4 transition-all duration-300 hover:bg-white/[0.05] hover:border-amber-500/30">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500/20 text-amber-300 font-bold text-sm">
-                        {idx + 1}
+                    <div className="flex items-start gap-3 mb-3">
+                      {product.image_url && (
+                        <img
+                          src={product.image_url}
+                          alt={productName(product)}
+                          className="w-12 h-12 object-cover rounded-lg border border-white/10 shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-300 font-bold text-xs">
+                            {idx + 1}
+                          </div>
+                          <Badge className={cn("text-[10px]", getTrendStatusColor(product.trend_status))}>
+                            {product.trend_status || "Trending"}
+                          </Badge>
+                        </div>
+                        <h3 className="text-sm font-medium text-white line-clamp-2 group-hover:text-amber-200 transition-colors">
+                          {productName(product)}
+                        </h3>
                       </div>
-                      <Badge className={cn("text-[10px]", getTrendStatusColor(product.trend_status))}>
-                        {product.trend_status || "Trending"}
-                      </Badge>
                     </div>
-                    <h3 className="text-sm font-medium text-white truncate group-hover:text-amber-200 transition-colors">
-                      {productName(product)}
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-1 capitalize">{product.category?.replace(/_/g, " ") || "General"}</p>
+                    <p className="text-xs text-gray-500 capitalize">{product.category || "General"}</p>
+                    {product.price && (
+                      <p className="text-sm text-emerald-300 mt-1">{product.price}</p>
+                    )}
                     <div className="mt-3 flex items-center justify-between">
                       <span className="text-xs text-gray-400">Score: <span className="text-white font-medium">{formatScore(product.trend_score)}</span></span>
                       <TrendingUp className="w-4 h-4 text-emerald-400" />
@@ -560,7 +589,7 @@ function HowItWorksSection() {
       icon: LayoutGrid,
     },
     {
-      number: "02", 
+      number: "02",
       title: "View Trending Products",
       description: "See products ranked by our proprietary trend score based on sales, social, and search data.",
       icon: TrendingUp,
@@ -582,7 +611,7 @@ function HowItWorksSection() {
   return (
     <section className="relative px-6 py-20 sm:px-10">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-950/5 to-transparent pointer-events-none" />
-      
+
       <div className="max-w-6xl mx-auto relative">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -642,7 +671,7 @@ function TestimonialSection() {
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-indigo-500/5 rounded-full blur-[100px]" />
       </div>
-      
+
       <div className="max-w-4xl mx-auto relative">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -655,7 +684,7 @@ function TestimonialSection() {
             Trusted By Leaders
           </span>
         </motion.div>
-        
+
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -690,7 +719,7 @@ function FinalCta() {
             Stop Chasing Yesterday&apos;s Trends
           </h2>
           <p className="mt-6 text-lg text-gray-300 max-w-2xl mx-auto">
-            Join thousands of sellers who discover winning products before they peak. 
+            Join thousands of sellers who discover winning products before they peak.
             Start exploring category trends for free.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
