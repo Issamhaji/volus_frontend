@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LockedTile } from "@/components/ui/locked-tile";
+import { Modal } from "@/components/ui/modal";
+import { ProductInsightsClient } from "@/app/insights/product/ProductInsightsClient";
 import { planLabel, PlanTier } from "@/lib/plan-tiers";
 import { motion, AnimatePresence } from "framer-motion";
 import GradientText from "@/components/ui/gradient-text";
@@ -107,6 +109,17 @@ function getTrendStatusColor(status?: string) {
   }
 }
 
+
+function safeBtoa(str: string) {
+  try {
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function (match, p1) {
+      return String.fromCharCode(parseInt(p1, 16));
+    }));
+  } catch (e) {
+    return "";
+  }
+}
+
 export default function TrendsLanding({
   categories,
   selectedCategory,
@@ -118,6 +131,15 @@ export default function TrendsLanding({
 }: TrendsLandingProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<TrendProduct | null>(null);
+
+  const handleProductClick = useCallback((product: TrendProduct) => {
+    setSelectedProduct(product);
+  }, []);
+
+  const closeProductModal = useCallback(() => {
+    setSelectedProduct(null);
+  }, []);
 
   const handleCategorySelect = useCallback((categoryId: string) => {
     router.push(`/trends-explorer?category=${encodeURIComponent(categoryId)}`);
@@ -161,12 +183,14 @@ export default function TrendsLanding({
             category={selectedCategoryInfo}
             products={categoryTrends}
             unlockedPro={unlockedPro}
+            onProductClick={handleProductClick}
           />
         )}
 
         <HotTrendsSection
           products={hotProducts}
           unlockedPro={unlockedPro}
+          onProductClick={handleProductClick}
         />
 
         <AnimatedValueSection />
@@ -174,9 +198,20 @@ export default function TrendsLanding({
         <HowItWorksSection />
         <TestimonialSection />
         <PricingSection />
+        <PricingSection />
         <FinalCta />
         <Footer />
       </main>
+
+      <Modal isOpen={!!selectedProduct} onClose={closeProductModal}>
+        {selectedProduct && (
+          <ProductInsightsClient
+            key={selectedProduct.id}
+            productId={selectedProduct.id.toString()}
+            encodedPayload={typeof window !== 'undefined' ? safeBtoa(JSON.stringify(selectedProduct)) : undefined}
+          />
+        )}
+      </Modal>
     </div>
   );
 }
@@ -372,9 +407,10 @@ interface CategoryResultsProps {
   category: { id: string; name: string; icon: string; color: string; borderColor: string };
   products: TrendProduct[];
   unlockedPro: boolean;
+  onProductClick: (product: TrendProduct) => void;
 }
 
-function CategoryResults({ category, products, unlockedPro }: CategoryResultsProps) {
+function CategoryResults({ category, products, unlockedPro, onProductClick }: CategoryResultsProps) {
   return (
     <section className="relative px-6 py-16 sm:px-10">
       <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/10 via-transparent to-transparent pointer-events-none" />
@@ -431,7 +467,13 @@ function CategoryResults({ category, products, unlockedPro }: CategoryResultsPro
                     upgradeHref="/#pricing"
                     compact={false}
                   >
-                    <div className="group relative rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition-all duration-300 hover:bg-white/[0.05] hover:border-white/20">
+                    <div
+                      onClick={() => unlocked && onProductClick(product)}
+                      className={cn(
+                        "group relative rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition-all duration-300 hover:bg-white/[0.05] hover:border-white/20",
+                        unlocked && "cursor-pointer"
+                      )}
+                    >
                       <div className="flex items-start gap-4">
                         {product.image_url && (
                           <img
@@ -494,9 +536,10 @@ function CategoryResults({ category, products, unlockedPro }: CategoryResultsPro
 interface HotTrendsSectionProps {
   products: TrendProduct[];
   unlockedPro: boolean;
+  onProductClick: (product: TrendProduct) => void;
 }
 
-function HotTrendsSection({ products, unlockedPro }: HotTrendsSectionProps) {
+function HotTrendsSection({ products, unlockedPro, onProductClick }: HotTrendsSectionProps) {
   if (products.length === 0) return null;
 
   return (
@@ -538,7 +581,13 @@ function HotTrendsSection({ products, unlockedPro }: HotTrendsSectionProps) {
                   upgradeHref="/#pricing"
                   compact={true}
                 >
-                  <div className="group relative rounded-xl border border-white/10 bg-white/[0.02] p-4 transition-all duration-300 hover:bg-white/[0.05] hover:border-amber-500/30">
+                  <div
+                    onClick={() => unlocked && onProductClick(product)}
+                    className={cn(
+                      "group relative rounded-xl border border-white/10 bg-white/[0.02] p-4 transition-all duration-300 hover:bg-white/[0.05] hover:border-amber-500/30",
+                      unlocked && "cursor-pointer"
+                    )}
+                  >
                     <div className="flex items-start gap-3 mb-3">
                       {product.image_url && (
                         <img

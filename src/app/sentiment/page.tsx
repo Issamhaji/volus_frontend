@@ -34,29 +34,14 @@ async function fetchSentimentData() {
   }
 }
 
-interface SentimentData {
-  overall_sentiment?: {
-    average_rating?: number;
-    weighted_average?: number;
-    total_products_analyzed?: number;
-    total_reviews?: number;
-  };
-  sentiment_distribution?: {
-    positive?: number;
-    neutral?: number;
-    negative?: number;
-    positive_percent?: number;
-  };
-  emotion_breakdown?: {
-    satisfaction?: number;
-    trust?: number;
-    value_perception?: number;
-  };
-  signals?: {
-    trending_positive?: boolean;
-    review_velocity?: string;
-    confidence?: number;
-  };
+function safeBtoa(str: string) {
+  try {
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function (match, p1) {
+      return String.fromCharCode(parseInt(p1, 16));
+    }));
+  } catch (e) {
+    return "";
+  }
 }
 
 const defaultStats = [
@@ -116,17 +101,49 @@ const signalSources = [
   },
 ];
 
+// ... existing interfaces
+
 export default function SentimentPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    setIsSearching(true);
+    setHasSearched(true);
+    try {
+      const res = await fetch(`${API_BASE}/insights?query=${encodeURIComponent(query)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResults(data.relatedProducts || []);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   return (
     <div className="relative min-h-screen bg-black text-white">
       <BackgroundAura />
       <main className="relative z-10">
         <SiteNavbar variant="marketing" />
-        <Hero />
-        <SignalSection />
-        <AnimatedValueSection />
-        <PricingSection />
-        <TestimonialSection />
+        <Hero onSearch={handleSearch} isSearching={isSearching} />
+
+        {hasSearched ? (
+          <SearchResultsSection results={searchResults} loading={isSearching} />
+        ) : (
+          <>
+            <SignalSection />
+            <AnimatedValueSection />
+            <PricingSection />
+            <TestimonialSection />
+          </>
+        )}
+
         <FinalCta />
         <Footer />
       </main>
@@ -144,16 +161,17 @@ function BackgroundAura() {
   );
 }
 
-function Hero() {
-  const router = useRouter();
+function Hero({ onSearch, isSearching }: { onSearch: (q: string) => void, isSearching: boolean }) {
   const [query, setQuery] = useState("");
   const [stats, setStats] = useState(defaultStats);
-  const isDisabled = useMemo(() => !query.trim(), [query]);
+  const isDisabled = useMemo(() => !query.trim() || isSearching, [query, isSearching]);
 
   useEffect(() => {
+    // ... loadData logic same as before
     const loadData = async () => {
       const data = await fetchSentimentData();
       if (data) {
+        // ... (keep existing stats logic)
         const avgRating = data.overall_sentiment?.average_rating || 4.28;
         const positivePercent = data.sentiment_distribution?.positive_percent || 85.2;
         const totalReviews = data.overall_sentiment?.total_reviews || 2820261;
@@ -172,13 +190,14 @@ function Hero() {
     event.preventDefault();
     const nextQuery = query.trim();
     if (!nextQuery) return;
-    router.push(`/insights?query=${encodeURIComponent(nextQuery)}`);
+    onSearch(nextQuery);
   };
 
   return (
     <section className="relative overflow-hidden px-6 pt-28 pb-24 sm:px-10">
       <div className="max-w-6xl mx-auto grid gap-12 lg:grid-cols-[1.2fr_0.8fr] items-center">
         <div>
+          {/* ... keeping existing content headers */}
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs uppercase tracking-[0.25em] text-indigo-200">
             Sentiment Analysis Suite
           </div>
@@ -209,11 +228,12 @@ function Hero() {
                 disabled={isDisabled}
                 className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold px-6 py-3 rounded-full h-auto"
               >
-                Analyze
+                {isSearching ? "Analyzing..." : "Analyze"}
               </Button>
             </div>
           </form>
 
+          {/* ... buttons and stats */}
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
             <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-8 h-12 rounded-full text-base">
               <Link href="/signup">Start 14-day Trial</Link>
@@ -245,6 +265,54 @@ function Hero() {
             <LiveEmotionGrid />
             <DynamicNarrative />
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SearchResultsSection({ results, loading }: { results: any[], loading: boolean }) {
+  if (loading) {
+    return <div className="py-20 text-center text-gray-400">Analyzing products...</div>;
+  }
+
+  if (results.length === 0) {
+    return <div className="py-20 text-center text-gray-400">No products found matching your analysis criteria.</div>;
+  }
+
+  return (
+    <section className="px-6 py-12 sm:px-10">
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-2xl font-bold text-white mb-8">Sentiment Analysis Results</h2>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {results.map((product) => (
+            <div key={product.id} className="relative rounded-2xl border border-white/10 bg-white/[0.02] p-6 hover:bg-white/[0.04] transition-colors">
+              <div className="flex items-start gap-4 mb-4">
+                {product.image_url && (
+                  <img src={product.image_url} alt={product.name} className="w-16 h-16 rounded-lg object-cover bg-white/5" />
+                )}
+                <div>
+                  <h3 className="font-semibold text-lg text-white line-clamp-2">{product.name}</h3>
+                  <p className="text-sm text-gray-400">{product.category}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Rating</p>
+                  <p className="text-xl font-bold text-white">{product.rating || "—"}</p>
+                </div>
+                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Reviews</p>
+                  <p className="text-xl font-bold text-white">{product.rating_count || "—"}</p>
+                </div>
+              </div>
+
+              <Button className="w-full bg-indigo-600/20 text-indigo-200 border border-indigo-500/30 hover:bg-indigo-600/30" asChild>
+                <Link href={`/insights/product?payload=${typeof window !== 'undefined' ? safeBtoa(JSON.stringify(product)) : ''}&id=${product.id}`}>View Deep Insights</Link>
+              </Button>
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -363,8 +431,8 @@ function FinalCta() {
         </p>
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
           <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 h-12 rounded-full px-10 text-base">
-            
-             <Link href="/help">Talk to Revenue Team</Link>
+
+            <Link href="/help">Talk to Revenue Team</Link>
           </Button>
           <Button variant="outline" className="border-white/40 text-slate-800 hover:text-white hover:bg-white/10 h-12 rounded-full px-10 text-base" asChild>
             <Link href="/signup">Start free trial</Link>

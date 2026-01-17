@@ -10,7 +10,10 @@ interface ProductInsightsPageProps {
 export default async function ProductInsightsPage({ searchParams }: ProductInsightsPageProps) {
   const params = await searchParams;
   const payload = params?.payload;
-  const encodedPayload = Array.isArray(payload) ? payload[0] : payload ?? "";
+  const encodedPayload = Array.isArray(payload) ? payload[0] : payload ?? undefined;
+
+  const idParam = params?.id;
+  const productId = Array.isArray(idParam) ? idParam[0] : idParam;
 
   return (
     <div className="relative min-h-screen bg-black text-white">
@@ -24,7 +27,7 @@ export default async function ProductInsightsPage({ searchParams }: ProductInsig
         <SiteNavbar variant="marketing" />
         <section className="px-4 pt-28 pb-24 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-6xl">
-            <ProductInsightsClient encodedPayload={encodedPayload} />
+            <ProductInsightsClient encodedPayload={encodedPayload} productId={productId} />
           </div>
         </section>
       </main>

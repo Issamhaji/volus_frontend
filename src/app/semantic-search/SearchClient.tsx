@@ -20,6 +20,9 @@ interface SearchResult {
   platforms_count?: number;
   first_seen?: string;
   last_updated?: string;
+  image_url?: string;
+  price?: string;
+  rating?: string;
 }
 
 interface SearchResponse {
@@ -34,6 +37,17 @@ function mask(value?: number | string) {
   const str = typeof value === "number" ? value.toFixed(1) : value;
   if (str.length <= 2) return "***";
   return `${str.slice(0, 1)}**${str.slice(-1)}`;
+}
+
+function safeBtoa(str: string) {
+  try {
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function (match, p1) {
+      return String.fromCharCode(parseInt(p1, 16));
+    }));
+  } catch (e) {
+    console.error("Encoding error", e);
+    return "";
+  }
 }
 
 export function SearchClient({ planTier }: { planTier: PlanTier }) {
@@ -65,16 +79,32 @@ export function SearchClient({ planTier }: { planTier: PlanTier }) {
       });
       if (!res.ok) throw new Error(`Search failed with ${res.status}`);
       const payload: SearchResponse = await res.json();
-      setResults(payload.results ?? []);
+
+      // Strict deduplication by ID and Name
+      const seenIds = new Set();
+      const seenNames = new Set();
+      const uniqueResults: SearchResult[] = [];
+
+      for (const item of (payload.results ?? [])) {
+        const normalizedName = item.name?.trim().toLowerCase();
+        // Check uniqueness for both ID and Name
+        if (!seenIds.has(item.id) && (!normalizedName || !seenNames.has(normalizedName))) {
+          seenIds.add(item.id);
+          if (normalizedName) seenNames.add(normalizedName);
+          uniqueResults.push(item);
+        }
+      }
+
+      setResults(uniqueResults);
       setSuggestions(payload.suggestions ?? []);
     } catch (err) {
       console.error(err);
       setError("Search unavailable right now. Showing cached preview.");
       setResults([
-        { id: 1, name: "Sony WF-1000XM5", category: "electronics", trend_score: 85.5, momentum: 0.12, platforms_count: 4 },
-        { id: 2, name: "AirPods Pro 2", category: "electronics", trend_score: 78.2, momentum: 0.08, platforms_count: 5 },
-        { id: 3, name: "Anker Soundcore Sport", category: "electronics", trend_score: 64.4, momentum: 0.05, platforms_count: 3 },
-        { id: 4, name: "Beats Fit Pro", category: "electronics", trend_score: 70.1, momentum: 0.09, platforms_count: 4 },
+        { id: 1, name: "Sony WF-1000XM5", category: "electronics", trend_score: 85.5, momentum: 0.12, platforms_count: 4, trend_status: "stable" },
+        { id: 2, name: "AirPods Pro 2", category: "electronics", trend_score: 78.2, momentum: 0.08, platforms_count: 5, trend_status: "rising" },
+        { id: 3, name: "Anker Soundcore Sport", category: "electronics", trend_score: 64.4, momentum: 0.05, platforms_count: 3, trend_status: "emerging" },
+        { id: 4, name: "Beats Fit Pro", category: "electronics", trend_score: 70.1, momentum: 0.09, platforms_count: 4, trend_status: "stable" },
       ]);
     } finally {
       setLoading(false);
@@ -100,9 +130,9 @@ export function SearchClient({ planTier }: { planTier: PlanTier }) {
             placeholder="Search products (e.g., 'tiktok beauty', 'air fryer')"
             className="flex-1 bg-transparent px-2 py-3 text-base text-white placeholder:text-gray-500 focus:outline-none"
           />
-          <Button 
-            type="submit" 
-            disabled={loading} 
+          <Button
+            type="submit"
+            disabled={loading}
             className="rounded-full bg-white px-8 py-6 text-base font-semibold text-black hover:bg-gray-200 transition-all"
           >
             {loading ? "Searching…" : "Search"}
@@ -123,30 +153,50 @@ export function SearchClient({ planTier }: { planTier: PlanTier }) {
               description={lockedDescription}
               upgradeHref="/#pricing"
             >
-              <div className="group relative h-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition-all hover:border-white/20 hover:bg-white/[0.04]">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1.5">
-                    <p className="text-lg font-semibold text-white line-clamp-2 group-hover:text-indigo-200 transition-colors">{result.name}</p>
-                    <p className="text-xs uppercase tracking-wider text-gray-500 font-medium">{result.category ?? "General"}</p>
+              <div className="group relative h-full flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-5 transition-all hover:border-white/20 hover:bg-white/[0.04]">
+                <div className="flex items-start gap-4 mb-4">
+                  {result.image_url && (
+                    <div className="shrink-0 h-16 w-16 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                      <img src={result.image_url} alt={result.name} className="h-full w-full object-cover" />
+                    </div>
+                  )}
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <p className="text-base sm:text-lg font-semibold text-white line-clamp-2 group-hover:text-indigo-200 transition-colors">{result.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs uppercase tracking-wider text-gray-500 font-medium">{result.category ?? "General"}</p>
+                      {result.price && <span className="text-xs text-emerald-400 font-medium">{result.price}</span>}
+                    </div>
                   </div>
-                  <Badge variant="secondary" className="bg-indigo-500/10 text-indigo-200 border border-indigo-500/20 shrink-0">
+                  <Badge variant="secondary" className="absolute top-5 right-5 bg-indigo-500/10 text-indigo-200 border border-indigo-500/20 shrink-0">
                     {unlocked ? (result.trend_status ?? "trend") : "Locked"}
                   </Badge>
                 </div>
-                
-                <div className="mt-6 grid grid-cols-3 gap-2">
-                   <div className="rounded-xl bg-white/5 p-2 text-center">
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Score</p>
-                      <p className="text-sm font-mono text-white">{unlocked ? result.trend_score?.toFixed?.(1) ?? "—" : mask(result.trend_score)}</p>
-                   </div>
-                   <div className="rounded-xl bg-white/5 p-2 text-center">
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Momentum</p>
-                      <p className="text-sm font-mono text-emerald-400">{unlocked ? result.momentum?.toFixed?.(2) ?? "—" : mask(result.momentum ?? "*")}</p>
-                   </div>
-                   <div className="rounded-xl bg-white/5 p-2 text-center">
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Sources</p>
-                      <p className="text-sm font-mono text-cyan-400">{unlocked ? result.platforms_count ?? "—" : mask(result.platforms_count ?? "*")}</p>
-                   </div>
+
+                <div className="grid grid-cols-3 gap-2 mb-6">
+                  <div className="rounded-xl bg-white/5 p-2 text-center">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Score</p>
+                    <p className="text-sm font-mono text-white">{unlocked ? result.trend_score?.toFixed?.(1) ?? "—" : mask(result.trend_score)}</p>
+                  </div>
+                  <div className="rounded-xl bg-white/5 p-2 text-center">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Momentum</p>
+                    <p className="text-sm font-mono text-emerald-400">{unlocked ? result.momentum?.toFixed?.(2) ?? "—" : mask(result.momentum ?? "*")}</p>
+                  </div>
+                  <div className="rounded-xl bg-white/5 p-2 text-center">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Sources</p>
+                    <p className="text-sm font-mono text-cyan-400">{unlocked ? result.platforms_count ?? "—" : mask(result.platforms_count ?? "*")}</p>
+                  </div>
+                </div>
+
+                <div className="mt-auto pt-4 border-t border-white/5">
+                  <Button
+                    className="w-full bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-200 border border-indigo-500/30"
+                    variant="outline"
+                    asChild
+                  >
+                    <a href={`/insights/product?payload=${typeof window !== 'undefined' ? safeBtoa(JSON.stringify(result)) : ''}&id=${result.id}`}>
+                      View Insights
+                    </a>
+                  </Button>
                 </div>
               </div>
             </LockedTile>

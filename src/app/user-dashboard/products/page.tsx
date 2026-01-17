@@ -6,26 +6,19 @@ import { determinePlanTier, hasPlanAccess } from "@/lib/plan-tiers";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight, Package, Plus, Sparkles, TrendingUp } from "lucide-react";
 
-const MOCK_PRODUCTS = [
-  {
-    name: "VoltFlux Pro Blender",
-    channels: "Amazon + TikTok Shop",
-    velocity: "+12.4%",
-    risk: "Inventory dips in CA",
-  },
-  {
-    name: "Lyra Smart Mirror",
-    channels: "DTC + Nordstrom",
-    velocity: "Stable",
-    risk: "Return rate 2.3%",
-  },
-  {
-    name: "Arcadia Mobility Desk",
-    channels: "Shopify + EU Retail",
-    velocity: "-4.2%",
-    risk: "Assembly complaints",
-  },
-];
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api").replace(/\/$/, "");
+
+async function getProducts() {
+  try {
+    const res = await fetch(`${API_BASE}/products?page=1&page_size=6`, { cache: "no-store" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.products || [];
+  } catch (err) {
+    console.error("Failed to fetch products", err);
+    return [];
+  }
+}
 
 export default async function ProductsPage() {
   const session = await auth();
@@ -37,6 +30,8 @@ export default async function ProductsPage() {
   const subscription = await getUserSubscription(session.user.id);
   const planTier = determinePlanTier(subscription);
   const unlockedPro = hasPlanAccess(planTier, "pro");
+
+  const products = await getProducts();
 
   return (
     <DashboardShell subscription={subscription} activeRoute="products">
@@ -62,34 +57,42 @@ export default async function ProductsPage() {
 
       <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
         <div className="grid gap-4 md:grid-cols-3">
-          {MOCK_PRODUCTS.map((product) => (
-            <div key={product.name} className="rounded-2xl border border-white/10 bg-black/40 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm uppercase tracking-[0.35em] text-gray-400">{product.channels}</p>
-                  <h3 className="mt-1 text-xl font-semibold text-white">{product.name}</h3>
+          {products.length > 0 ? (
+            products.map((product: any) => (
+              <div key={product.id} className="rounded-2xl border border-white/10 bg-black/40 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.35em] text-gray-400">
+                      {product.source?.replace(/_/g, " ") || "General"}
+                    </p>
+                    <h3 className="mt-1 text-xl font-semibold text-white line-clamp-1">{product.title}</h3>
+                  </div>
+                  <Package className="h-5 w-5 text-indigo-300" />
                 </div>
-                <Package className="h-5 w-5 text-indigo-300" />
+                <div className="mt-4 flex items-center justify-between text-sm text-gray-200">
+                  <div>
+                    <p className="text-xs text-gray-400">Category</p>
+                    <p className="text-emerald-300">{product.category || "Uncategorized"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Price</p>
+                    <p>{product.price || "—"}</p>
+                  </div>
+                </div>
+                <Button variant="ghost" className="mt-4 w-full justify-between text-sm text-indigo-200 hover:bg-white/5">
+                  View intelligence <ArrowUpRight className="h-4 w-4" />
+                </Button>
               </div>
-              <div className="mt-4 flex items-center justify-between text-sm text-gray-200">
-                <div>
-                  <p className="text-xs text-gray-400">Velocity</p>
-                  <p className={product.velocity.startsWith('-') ? 'text-rose-300' : 'text-emerald-300'}>{product.velocity}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Risk</p>
-                  <p>{product.risk}</p>
-                </div>
-              </div>
-              <Button variant="ghost" className="mt-4 w-full justify-between text-sm text-indigo-200 hover:bg-white/5">
-                View intelligence <ArrowUpRight className="h-4 w-4" />
-              </Button>
+            ))
+          ) : (
+            <div className="col-span-3 text-center py-10 text-gray-400">
+              No products found. Start by importing your catalog.
             </div>
-          ))}
+          )}
         </div>
       </section>
 
-  <FeatureGate unlocked={unlockedPro} label="Predictive inventory">
+      <FeatureGate unlocked={unlockedPro} label="Predictive inventory">
         <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-purple-900/30 to-black p-6">
           <div className="flex flex-wrap items-center gap-3">
             <Sparkles className="h-6 w-6 text-purple-200" />

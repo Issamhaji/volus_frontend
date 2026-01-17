@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const DEFAULT_DASHBOARD_SERVICE_URL = "http://ec2-98-89-247-69.compute-1.amazonaws.com:8001/api";
 const DASHBOARD_SERVICE_URL =
   (process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  DEFAULT_DASHBOARD_SERVICE_URL);
+    DEFAULT_DASHBOARD_SERVICE_URL);
 
 const RELATED_KEYS = [
   "related_products",
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
     if (id) {
       upstreamUrl = `${DASHBOARD_SERVICE_URL}/products/insights/${id}`;
     } else {
-      upstreamUrl = `${DASHBOARD_SERVICE_URL}/search?query=${encodeURIComponent(query!)}`;
+      upstreamUrl = `${DASHBOARD_SERVICE_URL}/insights?query=${encodeURIComponent(query!)}`;
     }
 
     const upstreamResponse = await fetch(upstreamUrl, {
